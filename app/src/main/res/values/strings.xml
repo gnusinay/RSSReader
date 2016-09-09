@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">RSS Reader</string>
+    <string name="rss_uri">http://www.gazeta.ru/export/rss/sport.xml</string>
+    <string name="parse_error_message">An error has occurred. %s</string>
+    <string name="no_news_text">No loaded news</string>
+    <string name="file_not_found_exception_message">File %s not found</string>
+    <string name="xml_parser_exception_message">File %1$s can not be parsed. %2$s</string>
+    <string name="default_title_channel">No title channel</string>
+    <string name="reload_status">Loading news...</string>
+</resources>
