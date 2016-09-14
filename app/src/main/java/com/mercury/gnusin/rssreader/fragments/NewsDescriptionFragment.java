@@ -10,33 +10,28 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.mercury.gnusin.rssreader.activities.NewsDescriptionActivity;
-import com.mercury.gnusin.rssreader.rss.NewsStorage;
+import com.mercury.gnusin.rssreader.database.RSSChannelSQLOpenHelper;
+import com.mercury.gnusin.rssreader.rss.News;
 
 
 public class NewsDescriptionFragment extends Fragment {
 
     public static final String TAG = "NewsDescriptionFragment";
+    public static final String SHOWN_NEWS_ID_BUNDLE_KEY = "newsID";
 
-    public static NewsDescriptionFragment newInstance(int position) {
-        NewsDescriptionFragment fragment = new NewsDescriptionFragment();
-
-        Bundle bundle =  new Bundle();
-        bundle.putInt(NewsDescriptionActivity.SHOWN_POSITION_BUNDLE_KEY, position);
-        fragment.setArguments(bundle);
-
-        return fragment;
-    }
-
-    public int getShownPosition() {
-        return getArguments().getInt(NewsDescriptionActivity.SHOWN_POSITION_BUNDLE_KEY, -1);
+    public int getShownNewsId() {
+        return getArguments().getInt(NewsDescriptionFragment.SHOWN_NEWS_ID_BUNDLE_KEY, -1);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        int newsPosition = getShownPosition();
-        if (newsPosition != -1) {
+        RSSChannelSQLOpenHelper sqlOpenHelper = RSSChannelSQLOpenHelper.getInstance(getContext());
+
+        News news = sqlOpenHelper.getNewsById(getShownNewsId());
+
+        if (news != null) {
             if (getActivity().getClass().equals(NewsDescriptionActivity.class)) {
-                getActivity().setTitle(NewsStorage.getNewsTitle(newsPosition));
+                getActivity().setTitle(news.getTitle());
             }
 
             ScrollView scroller = new ScrollView(getActivity());
@@ -44,7 +39,7 @@ public class NewsDescriptionFragment extends Fragment {
             int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4, getActivity().getResources().getDisplayMetrics());
             text.setPadding(padding, padding, padding, padding);
             text.setTextSize(16);
-            text.setText(NewsStorage.getNewsDescription(newsPosition));
+            text.setText(news.getDescription());
             scroller.addView(text);
             return scroller;
         }

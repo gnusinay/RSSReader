@@ -3,16 +3,13 @@ package com.mercury.gnusin.rssreader.services;
 import android.app.IntentService;
 import android.content.Intent;
 import android.support.v4.content.LocalBroadcastManager;
-
 import com.mercury.gnusin.rssreader.R;
 import com.mercury.gnusin.rssreader.database.RSSChannelSQLOpenHelper;
+import com.mercury.gnusin.rssreader.rss.Channel;
 import com.mercury.gnusin.rssreader.rss.News;
-import com.mercury.gnusin.rssreader.database.NewsSQLOpenHelper;
-
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,15 +18,11 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by gnusin on 09.09.2016.
- */
+
 public class RSSFetchService extends IntentService {
 
     public static final String ERROR_FETCH_EVENT = "ERROR_FETCH";
     public static final String FINISH_FETCH_EVENT = "FINISH_FETCH";
-
-    //private final String RSS_CHANNEL_URI = getApplicationContext().getString(R.string.rss_uri);
 
     public RSSFetchService() {
         super("RSSFetchService");
@@ -37,12 +30,13 @@ public class RSSFetchService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        int channelId = intent.getIntExtra("channelID", 0);
+        int channelId = intent.getIntExtra("value", 0);
 
 
         if (channelId > 0) {
             String errorMessage = "";
             try {
+
                 fetch(channelId);
             } catch (FileNotFoundException ef) {
                 errorMessage = String.format(getString(R.string.file_not_found_exception_message), getString(R.string.rss_uri));
@@ -51,29 +45,27 @@ public class RSSFetchService extends IntentService {
             } catch (IOException ei) {
                 errorMessage = ei.getMessage();
             }
+
             if ("".equals(errorMessage)) {
-                NewsSQLOpenHelper sqlHelper = new NewsSQLOpenHelper(getApplicationContext());
-                sqlHelper.updateNews(loadedNewsList);
-                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(new Intent(FINISH_FETCH_EVENT));
+                Intent broadcastIntent = new Intent(FINISH_FETCH_EVENT);
+                broadcastIntent.putExtra("value", channelId);
+                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(broadcastIntent);
             } else {
                 Intent broadcastIntent = new Intent(ERROR_FETCH_EVENT);
                 broadcastIntent.putExtra("value", errorMessage);
                 LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(broadcastIntent);
             }
-
         }
-
-
     }
 
     public void fetch(int channelId) throws FileNotFoundException, XmlPullParserException, IOException {
-        RSSChannelSQLOpenHelper sqlHelper = new RSSChannelSQLOpenHelper(getApplicationContext());
-        String channelURI = sqlHelper.getChannelURI(channelId);
+        RSSChannelSQLOpenHelper sqlHelper = RSSChannelSQLOpenHelper.getInstance(getApplicationContext());
+        Channel channel = sqlHelper.getChannel(channelId);
 
         InputStream in = null;
         List<News> loadedNewsList = new ArrayList<>();
         try {
-            URL url = new URL(channelURI);
+            URL url = new URL(channel.getUri());
             URLConnection connection = url.openConnection();
             in = connection.getInputStream();
 
@@ -125,10 +117,11 @@ public class RSSFetchService extends IntentService {
                     default:
                         eventType = parser.next();
                 }
-                throw new FileNotFoundException();
             }
 
-            sqlHelper.
+            channel.setTitle(titleChannel);
+            channel.setNewsList(loadedNewsList);
+            sqlHelper.saveChannel(channel);
 
         } finally {
             if (in != null) {

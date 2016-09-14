@@ -2,9 +2,7 @@ package com.mercury.gnusin.rssreader.database;
 
 import android.provider.BaseColumns;
 
-/**
- * Created by gnusin on 09.09.2016.
- */
+
 public final class RSSChannelContract {
 
     public RSSChannelContract() {}

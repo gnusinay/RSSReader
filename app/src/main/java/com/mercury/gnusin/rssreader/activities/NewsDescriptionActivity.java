@@ -10,8 +10,6 @@ import com.mercury.gnusin.rssreader.fragments.NewsDescriptionFragment;
 
 public class NewsDescriptionActivity extends AppCompatActivity {
 
-    public static final String SHOWN_POSITION_BUNDLE_KEY = "position";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -22,10 +20,10 @@ public class NewsDescriptionActivity extends AppCompatActivity {
         }
 
         if (savedInstanceState == null) {
-            NewsDescriptionFragment descriptionFragment = new NewsDescriptionFragment();
-            descriptionFragment.setArguments(getIntent().getExtras());
+            NewsDescriptionFragment fragment = new NewsDescriptionFragment();
+            fragment.setArguments(getIntent().getExtras());
             FragmentTransaction tran = getSupportFragmentManager().beginTransaction();
-            tran.replace(android.R.id.content, descriptionFragment);
+            tran.replace(android.R.id.content, fragment);
             tran.commit();
         }
     }
