@@ -21,8 +21,8 @@ import java.util.List;
 
 public class RSSFetchService extends IntentService {
 
-    public static final String ERROR_FETCH_EVENT = "ERROR_FETCH";
-    public static final String FINISH_FETCH_EVENT = "FINISH_FETCH";
+    public static final String FAILED_FETCH_EVENT = "FAILED_FETCH";
+    public static final String SUCCESSFUL_FETCH_EVENT = "SUCCESSFUL_FETCH";
 
     public RSSFetchService() {
         super("RSSFetchService");
@@ -39,19 +39,19 @@ public class RSSFetchService extends IntentService {
 
                 fetch(channelId);
             } catch (FileNotFoundException ef) {
-                errorMessage = String.format(getString(R.string.file_not_found_exception_message), getString(R.string.rss_uri));
+                errorMessage = String.format(getString(R.string.file_not_found_exception_message), ef.getMessage());
             } catch (XmlPullParserException ex) {
-                errorMessage = String.format(getString(R.string.xml_parser_exception_message), getString(R.string.rss_uri), ex.getMessage());
+                errorMessage = String.format(getString(R.string.xml_parser_exception_message), ex.getMessage());
             } catch (IOException ei) {
                 errorMessage = ei.getMessage();
             }
 
             if ("".equals(errorMessage)) {
-                Intent broadcastIntent = new Intent(FINISH_FETCH_EVENT);
+                Intent broadcastIntent = new Intent(SUCCESSFUL_FETCH_EVENT);
                 broadcastIntent.putExtra("value", channelId);
                 LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(broadcastIntent);
             } else {
-                Intent broadcastIntent = new Intent(ERROR_FETCH_EVENT);
+                Intent broadcastIntent = new Intent(FAILED_FETCH_EVENT);
                 broadcastIntent.putExtra("value", errorMessage);
                 LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(broadcastIntent);
             }

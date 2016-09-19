@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
@@ -22,17 +23,16 @@ import com.mercury.gnusin.rssreader.database.RSSChannelSQLOpenHelper;
 import com.mercury.gnusin.rssreader.rss.Channel;
 import com.mercury.gnusin.rssreader.rss.News;
 import com.mercury.gnusin.rssreader.services.RSSFetchService;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class NewsListFragment extends ListFragment {
 
     private boolean dualPane;
-    private int curPosition = 0;
+    private int curPosition = -1;
     private String titleActivity;
     private Channel channel;
-    private List<BroadcastReceiver> receiverList = new ArrayList<>(2);
+    private BroadcastReceiver failedReceiver;
+    private BroadcastReceiver successfulReceiver;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,12 +41,9 @@ public class NewsListFragment extends ListFragment {
 
         channel = new Channel(getActivity().getPreferences(Context.MODE_PRIVATE).getInt(ReaderActivity.DEFAULT_CHANNEL_ID, 0), "", "");
 
-        BroadcastReceiver errorReceiver = new BroadcastReceiver() {
+        failedReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                getView().findViewById(R.id.loadIndicator).setVisibility(View.INVISIBLE);
-                getView().findViewById(R.id.emptyText).setVisibility(View.VISIBLE);
-
                 ((SwipeRefreshLayout) getView().findViewById(R.id.swipeContainer)).setRefreshing(false);
 
                 Toast.makeText(getActivity().getApplicationContext(), intent.getStringExtra("value"), Toast.LENGTH_LONG).show();
@@ -57,22 +54,21 @@ public class NewsListFragment extends ListFragment {
                 getActivity().setTitle(titleActivity);
             }
         };
-        receiverList.add(errorReceiver);
-        LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).registerReceiver(errorReceiver, new IntentFilter(RSSFetchService.ERROR_FETCH_EVENT));
+        LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).registerReceiver(failedReceiver, new IntentFilter(RSSFetchService.FAILED_FETCH_EVENT));
 
 
-        BroadcastReceiver finishReceiver = new BroadcastReceiver() {
+        successfulReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 RSSChannelSQLOpenHelper sqlOpenHelper = RSSChannelSQLOpenHelper.getInstance(getContext());
                 int iChannelId = intent.getIntExtra("value", -1);
+
                 if (channel.getId() == iChannelId) {
                     channel = sqlOpenHelper.getChannel(channel.getId());
 
                     setListAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, channel.getAllNewsTitles()));
 
                     ((SwipeRefreshLayout) getView().findViewById(R.id.swipeContainer)).setRefreshing(false);
-
 
                     if (dualPane) {
                         showDescription(channel.getNewsByOrderPosition(curPosition));
@@ -83,8 +79,7 @@ public class NewsListFragment extends ListFragment {
                 }
             }
         };
-        receiverList.add(finishReceiver);
-        LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).registerReceiver(finishReceiver, new IntentFilter(RSSFetchService.FINISH_FETCH_EVENT));
+        LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).registerReceiver(successfulReceiver, new IntentFilter(RSSFetchService.SUCCESSFUL_FETCH_EVENT));
 
         fetchChannel();
     }
@@ -96,11 +91,18 @@ public class NewsListFragment extends ListFragment {
 
         getActivity().setTitle(titleActivity);
 
-        View descriptionFrame = getActivity().findViewById(R.id.newsDescriptionFrame);
-        dualPane = descriptionFrame != null;
+        dualPane = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
 
         if (dualPane && getListView().getAdapter() != null && getListView().getAdapter().getCount() > 0) {
-            descriptionFrame.setVisibility(View.VISIBLE);
+            if (curPosition == -1) {
+                curPosition = 0;
+            }
+            View descriptionFrame = getActivity().findViewById(R.id.newsDescriptionFrame);
+            if (descriptionFrame != null) {
+                descriptionFrame.setVisibility(View.VISIBLE);
+                showDescription(channel.getNewsByOrderPosition(curPosition));
+            }
+        } else if (!dualPane && curPosition > -1) {
             showDescription(channel.getNewsByOrderPosition(curPosition));
         }
     }
@@ -122,11 +124,6 @@ public class NewsListFragment extends ListFragment {
             }
         });
 
-        if (getListAdapter() != null && getListAdapter().getCount() == 0) {
-            view.findViewById(R.id.loadIndicator).setVisibility(View.INVISIBLE);
-            view.findViewById(R.id.emptyText).setVisibility(View.VISIBLE);
-        }
-
         return view;
     }
 
@@ -138,12 +135,15 @@ public class NewsListFragment extends ListFragment {
         showDescription(channel.getNewsByOrderPosition(curPosition));
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+    }
 
     @Override
     public void onDestroy() {
-        for (BroadcastReceiver receiver : receiverList) {
-            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(receiver);
-        }
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(failedReceiver);
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(successfulReceiver);
         super.onDestroy();
     }
 
@@ -155,7 +155,7 @@ public class NewsListFragment extends ListFragment {
             public void run() {
                 RSSChannelSQLOpenHelper sqlOpenHelper = RSSChannelSQLOpenHelper.getInstance(getContext());
                 if (sqlOpenHelper.hasNews(channel)) {
-                    Intent finishIntent = new Intent(RSSFetchService.FINISH_FETCH_EVENT);
+                    Intent finishIntent = new Intent(RSSFetchService.SUCCESSFUL_FETCH_EVENT);
                     finishIntent.putExtra("value", channel.getId());
                     LocalBroadcastManager.getInstance(getContext()).sendBroadcast(finishIntent);
                 } else {
@@ -173,9 +173,8 @@ public class NewsListFragment extends ListFragment {
     }
 
 
-
     private void showDescription(News news) {
-       if (dualPane) {
+        if (dualPane) {
             getListView().setItemChecked(curPosition, true);
 
             NewsDescriptionFragment descriptionFragment = (NewsDescriptionFragment) getFragmentManager().findFragmentByTag(NewsDescriptionFragment.TAG);
@@ -187,7 +186,7 @@ public class NewsListFragment extends ListFragment {
             }
 
             FragmentTransaction tran = getFragmentManager().beginTransaction();
-            tran.replace(R.id.newsDescriptionFrame, descriptionFragment);
+            tran.replace(R.id.newsDescriptionFrame, descriptionFragment, NewsDescriptionFragment.TAG);
             tran.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
             tran.commit();
         } else {
