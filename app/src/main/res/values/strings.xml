@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">RSS Reader</string>
-    <string name="rss_uri">http://www.gazeta.ru/export/rss/sport.xml</string>
+    <string name="rss_uri">https://www.gazeta.ru/export/rss/sportnews.xml</string>
     <string name="parse_error_message">An error has occurred. %s</string>
     <string name="no_news_text">No loaded news</string>
     <string name="file_not_found_exception_message">RSS file not found. %s</string>
