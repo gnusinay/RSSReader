@@ -66,11 +66,12 @@ public class NewsListFragment extends ListFragment {
                 if (channel.getId() == iChannelId) {
                     channel = sqlOpenHelper.getChannel(channel.getId());
 
-                    setListAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, channel.getAllNewsTitles()));
+                    setListAdapter(new CustomAdapter<>(getActivity(), R.layout.i_title, channel.getAllNewsTitles()));
 
                     ((SwipeRefreshLayout) getView().findViewById(R.id.swipeContainer)).setRefreshing(false);
 
                     if (dualPane) {
+                        curPosition = 0;
                         showDescription(channel.getNewsByOrderPosition(curPosition));
                     }
 
@@ -92,6 +93,12 @@ public class NewsListFragment extends ListFragment {
         getActivity().setTitle(titleActivity);
 
         dualPane = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        //((CustomAdapter)getListAdapter()).setSelectedItem(-1);
+
+        if (getListView().getAdapter() != null) {
+            ((CustomAdapter)getListAdapter()).setSelectedItem(-1);
+
+        }
 
         if (dualPane && getListView().getAdapter() != null && getListView().getAdapter().getCount() > 0) {
             if (curPosition == -1) {
@@ -130,7 +137,7 @@ public class NewsListFragment extends ListFragment {
 
     @Override
     public void onListItemClick(ListView l, View v, int position, long id) {
-        v.setSelected(true);
+        //v.setSelected(true);
         curPosition = position;
         showDescription(channel.getNewsByOrderPosition(curPosition));
     }
@@ -174,8 +181,10 @@ public class NewsListFragment extends ListFragment {
 
 
     private void showDescription(News news) {
+        getListView().setItemChecked(curPosition, true);
+        getListView().smoothScrollToPosition(curPosition);
         if (dualPane) {
-            getListView().setItemChecked(curPosition, true);
+            ((CustomAdapter)getListAdapter()).setSelectedItem(curPosition);
 
             NewsDescriptionFragment descriptionFragment = (NewsDescriptionFragment) getFragmentManager().findFragmentByTag(NewsDescriptionFragment.TAG);
             if (descriptionFragment == null || descriptionFragment.getShownNewsId() != news.getId()) {

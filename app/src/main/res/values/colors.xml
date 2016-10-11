@@ -3,7 +3,9 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
-    <color name="pressed_color_item_list">#FFC940</color>
-    <color name="default_color_item_list">#FFFFFF</color>
+    <color name="item_background_selected">#FFC940</color>
+    <color name="item_background_default">#FFFFFF</color>
     <color name="news_description_background">#ECF7E5</color>
+    <color name="item_text_selected">#FFFFFF</color>
+    <color name="item_text_default">#696969</color>
 </resources>
